@@ -13,8 +13,8 @@ android {
         applicationId = "com.braden.coffee"
         minSdk = 24
         targetSdk = 37
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 2
+        versionName = "1.0.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -22,8 +22,10 @@ android {
     buildTypes {
         release {
             optimization {
+                // Optimize the whole app with R8 (full mode). A partial packageScope build
+                // produced an IllegalAccessError at startup (an obfuscated subclass was
+                // repackaged away from its package-private kotlin.collections superclass).
                 enable = true
-                packageScope = setOf("androidx.**", "kotlin.**", "kotlinx.**")
             }
         }
     }
