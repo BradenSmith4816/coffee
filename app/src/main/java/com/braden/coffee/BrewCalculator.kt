@@ -15,8 +15,8 @@ enum class Field { Ratio, Coffee, Water, Brewed }
  */
 data class BrewState(
     val ratio: Double = DEFAULT_RATIO,
-    val anchor: Field = Field.Water,
-    val anchorValue: Double = 500.0,
+    val anchor: Field = Field.Coffee,
+    val anchorValue: Double = 18.0,
 ) {
     /** Grams of coffee per gram of water. */
     private val k: Double get() = ratio / 1000.0

@@ -10,9 +10,9 @@ class BrewStateTest {
     fun defaults() {
         val s = BrewState()
         assertEquals(60.0, s.ratio, eps)
-        assertEquals(500.0, s.water, eps)
-        assertEquals(30.0, s.coffee, eps)
-        assertEquals(440.0, s.brewed, eps)
+        assertEquals(18.0, s.coffee, eps)
+        assertEquals(300.0, s.water, eps)
+        assertEquals(264.0, s.brewed, eps)
     }
 
     @Test
