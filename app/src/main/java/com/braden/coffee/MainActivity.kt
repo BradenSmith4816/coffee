@@ -8,20 +8,23 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.VerticalDivider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -33,7 +36,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
@@ -47,15 +49,10 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlin.math.roundToLong
-
-private val Background = Color(0xFF15110F)
-private val TextPrimary = Color(0xFFEDE3D8)
-private val TextMuted = Color(0xFF8C7F74)
-private val Accent = Color(0xFFC8955A)
-private val Hairline = Color(0xFF2C2521)
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -70,13 +67,36 @@ private val BrewStateSaver = listSaver<BrewState, Any>(
     restore = { BrewState(it[0] as Double, Field.valueOf(it[1] as String), it[2] as Double) },
 )
 
+/** Sizing for the calculator column; landscape derives a compact set from the screen height. */
+private data class Dimens(
+    val valueSize: Float,
+    val ratioSize: Float,
+    val fieldPadding: Dp,
+    val sectionGap: Dp,
+    val hintGap: Dp,
+) {
+    companion object {
+        val Regular = Dimens(52f, 40f, 10.dp, 12.dp, 40.dp)
+
+        /** Scales the numbers with available height so all four fields fit without scrolling. */
+        fun compact(availableHeight: Dp): Dimens {
+            val v = (availableHeight.value * 0.1f).coerceIn(24f, 44f)
+            return Dimens(v, v * 0.8f, 3.dp, 6.dp, 10.dp)
+        }
+    }
+}
+
 @Composable
 fun BrewScreen() {
     var state by rememberSaveable(stateSaver = BrewStateSaver) { mutableStateOf(BrewState()) }
+    // Hoisted here so the timer keeps running when rotating back to portrait.
+    var timer by rememberSaveable(stateSaver = TimerStateSaver) { mutableStateOf(TimerState()) }
     val focusManager = LocalFocusManager.current
     val update: (Field, Double) -> Unit = { field, v -> state = state.with(field, v) }
 
-    Box(
+    KeepScreenOn(timer.isRunning)
+
+    BoxWithConstraints(
         Modifier
             .fillMaxSize()
             .background(Background)
@@ -86,26 +106,54 @@ fun BrewScreen() {
             .padding(horizontal = 28.dp),
         contentAlignment = Alignment.Center,
     ) {
-        Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.Center) {
-            BrewField("Ratio", "g/L", Field.Ratio, state.ratio, update, size = 40)
-            Spacer(Modifier.height(12.dp))
-            HorizontalDivider(color = Hairline)
-            Spacer(Modifier.height(12.dp))
-            BrewField("Coffee", "g", Field.Coffee, state.coffee, update)
-            BrewField("Water", "g", Field.Water, state.water, update)
-            Spacer(Modifier.height(12.dp))
-            HorizontalDivider(color = Hairline)
-            Spacer(Modifier.height(12.dp))
-            BrewField("Brewed", "g", Field.Brewed, state.brewed, update, highlight = true)
-            Spacer(Modifier.height(40.dp))
-            Text(
-                "Tap to type  ·  slide to fine-tune",
-                color = TextMuted.copy(alpha = 0.6f),
-                fontSize = 12.sp,
-                letterSpacing = 1.sp,
-                modifier = Modifier.align(Alignment.CenterHorizontally),
-            )
+        if (maxWidth > maxHeight) {
+            val dimens = Dimens.compact(maxHeight)
+            Row(Modifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
+                Calculator(state, update, dimens, Modifier.weight(1f))
+                Spacer(Modifier.width(28.dp))
+                VerticalDivider(color = Hairline, modifier = Modifier.fillMaxHeight(0.6f))
+                Spacer(Modifier.width(28.dp))
+                TimerPane(
+                    timer = timer,
+                    onTimerChange = { timer = it },
+                    timeSize = dimens.valueSize * 1.6f,
+                    modifier = Modifier.weight(1f),
+                )
+            }
+        } else {
+            Calculator(state, update, Dimens.Regular, Modifier.fillMaxWidth())
         }
+    }
+}
+
+@Composable
+private fun Calculator(
+    state: BrewState,
+    update: (Field, Double) -> Unit,
+    dimens: Dimens,
+    modifier: Modifier = Modifier,
+) {
+    val v = dimens.valueSize
+    val pad = dimens.fieldPadding
+    Column(modifier, verticalArrangement = Arrangement.Center) {
+        BrewField("Ratio", "g/L", Field.Ratio, state.ratio, update, dimens.ratioSize, pad)
+        Spacer(Modifier.height(dimens.sectionGap))
+        HorizontalDivider(color = Hairline)
+        Spacer(Modifier.height(dimens.sectionGap))
+        BrewField("Coffee", "g", Field.Coffee, state.coffee, update, v, pad)
+        BrewField("Water", "g", Field.Water, state.water, update, v, pad)
+        Spacer(Modifier.height(dimens.sectionGap))
+        HorizontalDivider(color = Hairline)
+        Spacer(Modifier.height(dimens.sectionGap))
+        BrewField("Brewed", "g", Field.Brewed, state.brewed, update, v, pad, highlight = true)
+        Spacer(Modifier.height(dimens.hintGap))
+        Text(
+            "Tap to type  ·  slide to fine-tune",
+            color = TextMuted.copy(alpha = 0.6f),
+            fontSize = 12.sp,
+            letterSpacing = 1.sp,
+            modifier = Modifier.align(Alignment.CenterHorizontally),
+        )
     }
 }
 
@@ -116,7 +164,8 @@ private fun BrewField(
     field: Field,
     value: Double,
     onValueChange: (Field, Double) -> Unit,
-    size: Int = 52,
+    size: Float,
+    verticalPadding: Dp,
     highlight: Boolean = false,
 ) {
     val focusManager = LocalFocusManager.current
@@ -167,7 +216,7 @@ private fun BrewField(
                 },
                 onEnd = { scrubbing = false },
             )
-            .padding(vertical = 10.dp),
+            .padding(vertical = verticalPadding),
     ) {
         Text(
             label.uppercase(),
@@ -211,7 +260,7 @@ private fun BrewField(
             Text(
                 unit,
                 color = TextMuted,
-                fontSize = 16.sp,
+                fontSize = (size * 0.3f).coerceIn(12f, 16f).sp,
                 modifier = Modifier.padding(bottom = (size / 5).dp, start = 8.dp),
             )
         }
@@ -223,5 +272,12 @@ private val NUMBER_INPUT = Regex("""\d*\.?\d*""")
 @Preview(showBackground = true, backgroundColor = 0xFF15110F, widthDp = 380, heightDp = 760)
 @Composable
 private fun BrewScreenPreview() {
+    BrewScreen()
+}
+
+// Roughly a Pixel 9 in landscape after system bar insets.
+@Preview(showBackground = true, backgroundColor = 0xFF15110F, widthDp = 860, heightDp = 340)
+@Composable
+private fun BrewScreenLandscapePreview() {
     BrewScreen()
 }
