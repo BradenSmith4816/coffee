@@ -8,6 +8,7 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -20,6 +21,7 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -109,7 +111,12 @@ fun BrewScreen() {
         if (maxWidth > maxHeight) {
             val dimens = Dimens.compact(maxHeight)
             Row(Modifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
-                Calculator(state, update, dimens, Modifier.weight(1f))
+                Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                    Calculator(
+                        state, update, dimens,
+                        Modifier.widthIn(max = CalculatorMaxWidth).fillMaxWidth(),
+                    )
+                }
                 Spacer(Modifier.width(28.dp))
                 VerticalDivider(color = Hairline, modifier = Modifier.fillMaxHeight(0.6f))
                 Spacer(Modifier.width(28.dp))
@@ -121,7 +128,10 @@ fun BrewScreen() {
                 )
             }
         } else {
-            Calculator(state, update, Dimens.Regular, Modifier.fillMaxWidth())
+            Calculator(
+                state, update, Dimens.Regular,
+                Modifier.widthIn(max = CalculatorMaxWidth).fillMaxWidth(),
+            )
         }
     }
 }
@@ -149,8 +159,8 @@ private fun Calculator(
         Spacer(Modifier.height(dimens.hintGap))
         Text(
             "Tap to type  ·  slide to fine-tune",
-            color = TextMuted.copy(alpha = 0.6f),
-            fontSize = 12.sp,
+            color = TextMuted.copy(alpha = 0.75f),
+            fontSize = LabelSize,
             letterSpacing = 1.sp,
             modifier = Modifier.align(Alignment.CenterHorizontally),
         )
@@ -221,7 +231,7 @@ private fun BrewField(
         Text(
             label.uppercase(),
             color = labelColor,
-            fontSize = 12.sp,
+            fontSize = LabelSize,
             letterSpacing = 2.sp,
             fontWeight = FontWeight.Medium,
         )
@@ -279,5 +289,12 @@ private fun BrewScreenPreview() {
 @Preview(showBackground = true, backgroundColor = 0xFF15110F, widthDp = 860, heightDp = 340)
 @Composable
 private fun BrewScreenLandscapePreview() {
+    BrewScreen()
+}
+
+// Wide portrait (tablet / unfolded) to check the max-width constraint.
+@Preview(showBackground = true, backgroundColor = 0xFF15110F, widthDp = 700, heightDp = 900)
+@Composable
+private fun BrewScreenWidePreview() {
     BrewScreen()
 }

@@ -124,7 +124,7 @@ internal fun TimerPane(
         Text(
             "TIMER",
             color = if (timer.isRunning) Accent else TextMuted,
-            fontSize = 12.sp,
+            fontSize = LabelSize,
             letterSpacing = 2.sp,
             fontWeight = FontWeight.Medium,
         )
